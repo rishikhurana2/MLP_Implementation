@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 3 layer perceptron, where each level is ReLU(Wh_{l - 1} + b_l)
-# h_{l - 1} is the previous layer
+# MLP where each level is ReLU(Wh_{l - 1} + b_l)
+# h_{l - 1} is output of the previous layer
 class MLP:
     def __init__(self, input_size, levels, hidden_layer_sizes):
         if levels == 0:
