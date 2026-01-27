@@ -47,7 +47,7 @@ class MLP:
             c = Y[idx] # class
             probs = self.softmax(logit_scores)
 
-            loss += -1 * np.log(probs[c])
+            loss += -1 * np.log(probs[c]) # accumulate cross entropy loss
             
             grad_H_l = probs - np.eye(self.num_classes)[c]
             grad_S_l = grad_H_l # initially, gradient w.r.t S_l equals H_l because top layer does not have ReLU
@@ -65,9 +65,10 @@ class MLP:
 
                 grad_biases[l] += grad_S_l
 
-                # compute gradient w.r.t output of below layer (for next for loop)
+                # compute gradient w.r.t output of below layer (for next iteration)
                 grad_H_l = self.weights[l].T @ grad_S_l
 
+        # normalize loss and loss gradient
         loss /= len(X)
         for l in range(self.levels):
             grad_mats[l] /= len(X)
@@ -75,7 +76,7 @@ class MLP:
         
         return loss, grad_mats, grad_biases
     
-    # train method: full-batch or minibatch
+    # training algorithm
     def train(self, X, Y, epochs, eta=0.1, batch_size=None, momentum_constant=None):
         N = len(X) # size of dataset
 
