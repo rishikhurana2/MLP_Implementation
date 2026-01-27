@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# Multi-Layer Perceptron, where each level is ReLU(Wh_{l - 1} + b_l),  h_{l - 1} is the previous layer
+# Multi-Layer Perceptron, where each level is h_l = ReLU(Wh_{l - 1} + b_l), except last layer, which has a softmax classifier
 # Functions:
 #     Computes loss/grad
 #     Trains perceptron given X and Y data (and takes in other training opts). 
