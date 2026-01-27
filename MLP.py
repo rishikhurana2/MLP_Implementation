@@ -9,15 +9,19 @@ import matplotlib.pyplot as plt
 #     Contains functions that determine accuracy on data sets with model parameters.
 #     Contains function that draws the decesion boundary given X. Y data
 class MLP:
-    # default activation function is ReLU
+    # Initialize the MLP with an input size and an array describing the number of neurons in each layer 
+    #
+    # @param int        input_size          number of input features to the MLP
+    # @param int array  hidden_layer_sizes  Array describing the number of neurons for each level. Last level should be the number of classes.
     def __init__(self, input_size, hidden_layer_sizes):
+
         if len(hidden_layer_sizes) == 0:
             raise ValueError("Number of levels must be greater than 0")
 
         self.levels = len(hidden_layer_sizes)        
         self.num_classes = hidden_layer_sizes[-1]        
         self.weights = [] # self.weights[i] holds the parameters for layer i + 1
-        self.biases  = []
+        self.biases  = [] # self.biases[i] holds the bias for layer i + 1
         prev_size    = input_size
 
         for lvl in range(self.levels):
@@ -29,11 +33,24 @@ class MLP:
 
             prev_size = hidden_layer_size
 
+    # Compute the softmax of an input vector
+    #
+    # @param  np.array  vec  an np.array of integers
+    # 
+    # @return np.array  softmax function applied to vec      
     def softmax(self, vec):
         normalize_vec = vec - np.max(vec)
         exp_vec = np.exp(normalize_vec)
         return exp_vec / np.sum(exp_vec)
-
+     
+    # Compute the loss and gradient over X, Y using ReLU activation function for each layer, except the top layer, which uses softmax
+    #
+    # @param  np.array   X   the feature set to use to compute gradient and loss
+    # @param  np.array   Y   the measurement set to use to compute gradient and loss
+    #
+    # @return np.float   The loss over X,Y
+    # @return array      An array of gradients w.r.t to matrix parameters
+    # @return array      An array of gradients w.r.t to bias parameters
     def loss_and_grad(self, X, Y):
         # initialize the gradients and biases 
         grad_mats   = [np.zeros_like(self.weights[i]) for i in range(len(self.weights))]
@@ -44,11 +61,12 @@ class MLP:
             S,H, _ = self.predict(X[idx])
             logit_scores = S[-1]
 
-            c = Y[idx] # class
-            probs = self.softmax(logit_scores)
+            c = Y[idx] # true class
+            probs = self.softmax(logit_scores) # class probabilities
 
-            loss += -1 * np.log(probs[c]) # accumulate cross entropy loss
+            loss += -1 * np.log(probs[c]) # accumulate the cross-entropy loss
             
+            # top layer gradient is softmax(logit) - y
             grad_H_l = probs - np.eye(self.num_classes)[c]
             grad_S_l = grad_H_l # initially, gradient w.r.t S_l equals H_l because top layer does not have ReLU
 
@@ -65,10 +83,10 @@ class MLP:
 
                 grad_biases[l] += grad_S_l
 
-                # compute gradient w.r.t output of below layer (for next iteration)
+                # compute gradient w.r.t output of below layer (for next for loop)
                 grad_H_l = self.weights[l].T @ grad_S_l
 
-        # normalize loss and loss gradient
+        # normalize the loss and gradients
         loss /= len(X)
         for l in range(self.levels):
             grad_mats[l] /= len(X)
@@ -76,7 +94,16 @@ class MLP:
         
         return loss, grad_mats, grad_biases
     
-    # training algorithm
+    # Train MLP on X, Y dataset over input epochs iterations, learning rate eta, batch_size samples per iteration, momentum_constant specifying if and how much momentum to use
+    #
+    # @param  np.array   X                  The feature set to use to compute gradient and loss
+    # @param  np.array   Y                  The measurement set to use to compute gradient and loss
+    # @param  int        epochs             The number of iterations for training
+    # @param  float      eta                The gradient descent learning rate 
+    # @param  int        batch_size         The number of samples to run GD over on each epoch
+    # @param  float      momentum_constant  If this is None, then no momentum is used. If a number is specified, specifies the Beta constant in momentum. Recommeded: 0.9
+    #
+    # @return array      A history of the cross-entropy loss values over all the epochs
     def train(self, X, Y, epochs, eta=0.1, batch_size=None, momentum_constant=None):
         N = len(X) # size of dataset
 
@@ -116,6 +143,13 @@ class MLP:
 
         return loss_hist
 
+    # Given an input point x, predict the label
+    # 
+    # @param  np.array  x  An input data point (must be of size input_size)
+    #
+    # @return array     An array of all the pre-activation values of each layer
+    # @return array     An array of all the post-activation values of each layer (except the last layer)
+    # @return np.int    An integer corresponding to the label of the output prediction
     def predict(self, x):
         inp = x
         H = []
@@ -135,47 +169,65 @@ class MLP:
         # return the maximal value of logit scores vector
         return S, H, np.argmax(self.softmax(logit_scores))
 
+    # Same as predict() function, but only returns the predicted label and does not return S, H arrays
+    #
+    # @ param  np.array  x   An input data point (must be of size input_size)
+    #
+    # @ return np.int    An integer corresponding to the label of the output prediction
     def predict_no_hidden(self, x):
         _,_, pred = self.predict(x)
         return pred
     
+    # Determine's the accuracy of the model a test/validation dataset X, Y
+    #
+    # @param  np.array  X  The X dataset containing the features
+    # @param  np.array  Y  The Y dataset contain the ground truth
+    #
+    # @return np.float  The accuracy of the predictions against the ground truth Y
     def determine_acc(self, X, Y):
         model_predict = []
         for x in X:
+            # predict all the data points
             model_predict.append(self.predict_no_hidden(x))
 
         model_predict = np.array(model_predict)
+        # sum all the correct predictions and divide by number of prediction to get the accuracy
         test_acc = np.sum(model_predict == Y) / len(model_predict)
 
         return test_acc
     
-    # requires training the model first for prediction
-    # plots the decision boundary of the trained model
+    # Plots the descion boundary using X and Y datasets for visualization. This method only really makes sense for X that has 1 or 2 Dimensional features.
+    # I used this function to visualize the performance of my model on prediction labels with X samples from [0,1]^2 and Y labels based on inside/outside the unit circle
+    # 
+    # @param  np.array  X   The X dataset containing the features
+    # @param  np.array  Y   The Y dataset containg  the ground truth
     def plot_decision_boundary(self, X, Y, resolution=200):
-        # 1. Define grid
+        # Define the grid
         x_min, x_max = X[:,0].min() - 0.2, X[:,0].max() + 0.2
         y_min, y_max = X[:,1].min() - 0.2, X[:,1].max() + 0.2
 
+        # Create the grid
         xx, yy = np.meshgrid(
             np.linspace(x_min, x_max, resolution),
             np.linspace(y_min, y_max, resolution)
         )
 
-        # 2. Flatten grid and run predictions
+        # Flatten grid and run predictions
         grid_points = np.c_[xx.ravel(), yy.ravel()]
         preds = []
 
+        # predict each point in the grid
         for p in grid_points:
             pred = self.predict_no_hidden(p)
             preds.append(pred)
 
         preds = np.array(preds).reshape(xx.shape)
 
-        # 3. Plot
+        # Plot the contour seperating the grid predictions
         plt.figure(figsize=(6,6))
         plt.contourf(xx, yy, preds, alpha=0.4)
 
-        # plot training points
+        # Visualize the graph contour with the test data
         plt.scatter(X[:,0], X[:,1], c=Y, edgecolor='k')
         plt.title("Decision Boundary")
 
