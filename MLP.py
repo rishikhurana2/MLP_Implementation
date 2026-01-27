@@ -1,8 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-# 3 layer perceptron, where each level is ReLU(Wh_{l - 1} + b_l)
-# h_{l - 1} is the previous layer
+# Multi-Layer Perceptron, where each level is ReLU(Wh_{l - 1} + b_l),  h_{l - 1} is the previous layer
+# Functions:
+#     Computes loss/grad
+#     Trains perceptron given X and Y data (and takes in other training opts). 
+#     Contains prediction (forward pass).
+#     Contains functions that determine accuracy on data sets with model parameters.
+#     Contains function that draws the decesion boundary given X. Y data
 class MLP:
     # default activation function is ReLU
     def __init__(self, input_size, hidden_layer_sizes):
