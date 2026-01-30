@@ -74,7 +74,8 @@ class MLP:
             for l in range(self.levels - 1, -1 , -1):
                 # if not the last level, then the gradient w.r.t S_l must include gradient of ReLU
                 if l < self.levels - 1:
-                    grad_S_l = grad_H_l * np.where(S[l] >= 0, 1, 0) # need to change this to account for different activation functions            
+                    relu_grad = (S[l] > 0).astype(float)
+                    grad_S_l = grad_H_l * relu_grad
 
                 if l >= 1:
                     grad_mats[l] += grad_S_l[:, None] @ H[l - 1][:, None].T
@@ -117,29 +118,41 @@ class MLP:
         velocity_mats   = [np.zeros_like(self.weights[i]) for i in range(len(self.weights))]
         velocity_biases = [np.zeros_like(self.biases[i]) for i in range(len(self.biases))]
         for _ in range(epochs):
-            # random sample mini batch indices
-            batch_indices = np.random.choice(np.arange(N), batch_size) 
-            X_batch = X[batch_indices]
-            Y_batch = Y[batch_indices]
+            # shuffle the dataset
+            indices = np.arange(N)
+            np.random.shuffle(indices)
+            
+            X_shuffled = X[indices]
+            Y_shuffled = Y[indices]
 
-            loss, grad_mats, grad_biases = self.loss_and_grad(X=X_batch, Y=Y_batch)
+            num_batches = int(np.ceil(N / batch_size))
+            batches_X = []
+            batches_Y = []
+            for i in range(num_batches):
+                # sample num_batches batches each of size batch_size
+                batches_X.append(X_shuffled[batch_size * i : batch_size * i + batch_size])
+                batches_Y.append(Y_shuffled[batch_size * i : batch_size * i + batch_size])
+            
+            for X_batch, Y_batch in zip(batches_X, batches_Y):
+                # compute the loss and gradient on the current batch
+                loss, grad_mats, grad_biases = self.loss_and_grad(X=X_batch, Y=Y_batch)
 
-            loss_hist.append(loss)
+                loss_hist.append(loss)
 
-            # gradient descent
-            for l in range(self.levels):
-                if momentum_constant:
-                    # compute velocity
-                    velocity_mats[l]   = momentum_constant * velocity_mats[l] + (1 - momentum_constant) * grad_mats[l]
-                    velocity_biases[l] = momentum_constant * velocity_biases[l] + (1 - momentum_constant) * grad_biases[l]
+                # Update the weights via gradient descent
+                for l in range(self.levels):
+                    if momentum_constant:
+                        # compute velocity
+                        velocity_mats[l]   = momentum_constant * velocity_mats[l] + grad_mats[l]
+                        velocity_biases[l] = momentum_constant * velocity_biases[l] + grad_biases[l]
 
-                    # move in direction of momentum
-                    self.weights[l] -= eta * velocity_mats[l]
-                    self.biases[l] -= eta * velocity_biases[l]
-                else:
-                    # move in direction of gradient descent
-                    self.weights[l] -= eta * grad_mats[l]
-                    self.biases[l] -= eta * grad_biases[l]                    
+                        # move in direction of momentum
+                        self.weights[l] -= eta * velocity_mats[l]
+                        self.biases[l] -= eta * velocity_biases[l]
+                    else:
+                        # move in direction of gradient descent
+                        self.weights[l] -= eta * grad_mats[l]
+                        self.biases[l] -= eta * grad_biases[l]                    
 
         return loss_hist
 

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import time
 from MLP import MLP
 
-epochs = 250
+epochs = 300
 
 N_train = 500
 X = np.random.uniform(0, 1, size=(N_train, 2))    
@@ -19,9 +19,10 @@ N_test = 500
 X_test = np.random.uniform(0, 1, size=(N_test, 2))
 Y_test = np.where(X_test[:, 0]**2 + X_test[:, 1]**2 < 1, 1, 0)
 
-best_layers = [32, 32, 32, 32, 32, 32, 32, 32, 32, 2]
+best_layers = [32, 32, 32, 32, 2]
 
-etas = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+best_batch_size = 256
+etas = [1e-5, 1e-4, 1e-3, 1e-2, 1e-1]
 accs = []
 
 for eta in etas:
@@ -29,7 +30,7 @@ for eta in etas:
     mlp = MLP(input_size=2, hidden_layer_sizes=best_layers)
 
     start_time = time.time()
-    mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=len(X_train), momentum=True)
+    mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=best_batch_size, momentum_constant=0.9)
     print(f"Train Time (s): {time.time() - start_time}")
 
     accs.append(mlp.determine_acc(X=X_val, Y=Y_val))
@@ -40,8 +41,8 @@ print(f"Best Eta: {best_eta}")
 
 # test on the test data
 mlp = MLP(input_size=2, hidden_layer_sizes=best_layers)
-loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=best_eta, batch_size=len(X_train), momentum=True)
+loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=best_eta, batch_size=best_batch_size, momentum_constant=0.9)
 print(f"Eta of {best_eta} achieved a test accuracy of: {mlp.determine_acc(X=X_test, Y=Y_test)}")
 
-plt.plot([i for i in range(epochs)], loss_hist)
+plt.plot(loss_hist)
 plt.show()
