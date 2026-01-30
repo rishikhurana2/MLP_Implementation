@@ -30,7 +30,7 @@ for eta in etas:
     mlp = MLP(input_size=2, hidden_layer_sizes=best_layers)
 
     start_time = time.time()
-    mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=best_batch_size, momentum_constant=0.9)
+    mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=best_batch_size, adam=True)
     print(f"Train Time (s): {time.time() - start_time}")
 
     accs.append(mlp.determine_acc(X=X_val, Y=Y_val))
@@ -41,7 +41,7 @@ print(f"Best Eta: {best_eta}")
 
 # test on the test data
 mlp = MLP(input_size=2, hidden_layer_sizes=best_layers)
-loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=best_eta, batch_size=best_batch_size, momentum_constant=0.9)
+loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=best_eta, batch_size=best_batch_size, adam=True)
 print(f"Eta of {best_eta} achieved a test accuracy of: {mlp.determine_acc(X=X_test, Y=Y_test)}")
 
 plt.plot(loss_hist)

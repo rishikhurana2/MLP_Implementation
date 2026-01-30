@@ -78,9 +78,9 @@ class MLP:
                     grad_S_l = grad_H_l * relu_grad
 
                 if l >= 1:
-                    grad_mats[l] += grad_S_l[:, None] @ H[l - 1][:, None].T
+                    grad_mats[l] += np.outer(grad_S_l, H[l - 1])
                 else:
-                    grad_mats[l] += grad_S_l[:, None] @ X[idx][:, None].T
+                    grad_mats[l] += np.outer(grad_S_l, X[idx])
 
                 grad_biases[l] += grad_S_l
 
@@ -105,7 +105,7 @@ class MLP:
     # @param  float      momentum_constant  If this is None, then no momentum is used. If a number is specified, specifies the Beta constant in momentum. Recommeded: 0.9
     #
     # @return array      A history of the cross-entropy loss values over all the epochs
-    def train(self, X, Y, epochs, eta=0.1, batch_size=None, momentum_constant=None):
+    def train(self, X, Y, epochs, eta=0.1, batch_size=None, adam=False):
         N = len(X) # size of dataset
 
         if not batch_size: batch_size = N
@@ -117,6 +117,10 @@ class MLP:
 
         velocity_mats   = [np.zeros_like(self.weights[i]) for i in range(len(self.weights))]
         velocity_biases = [np.zeros_like(self.biases[i]) for i in range(len(self.biases))]
+
+        square_grad_mats = [np.zeros_like(self.weights[i]) for i in range(len(self.weights))]
+        square_grad_bias = [np.zeros_like(self.biases[i]) for i in range(len(self.biases))]
+        t = 0
         for _ in range(epochs):
             # shuffle the dataset
             indices = np.arange(N)
@@ -138,6 +142,7 @@ class MLP:
                 batches_Y.append(Y_shuffled[start : end])
             
             for X_batch, Y_batch in zip(batches_X, batches_Y):
+                t += 1
                 # compute the loss and gradient on the current batch
                 loss, grad_mats, grad_biases = self.loss_and_grad(X=X_batch, Y=Y_batch)
 
@@ -145,14 +150,26 @@ class MLP:
 
                 # Update the weights via gradient descent
                 for l in range(self.levels):
-                    if momentum_constant:
+                    if adam:
+                        momentum_constant = 0.9
+                        adagrad_constant  = 0.999
                         # compute velocity
-                        velocity_mats[l]   = momentum_constant * velocity_mats[l] + grad_mats[l]
-                        velocity_biases[l] = momentum_constant * velocity_biases[l] + grad_biases[l]
+                        velocity_mats[l]   = momentum_constant * velocity_mats[l] + (1 - momentum_constant) * grad_mats[l]
+                        velocity_biases[l] = momentum_constant * velocity_biases[l] + (1 - momentum_constant) * grad_biases[l]
+
+                        # compute sum of square gradients
+                        square_grad_mats[l] = adagrad_constant * square_grad_mats[l] + (1 - adagrad_constant) * grad_mats[l] * grad_mats[l]
+                        square_grad_bias[l] = adagrad_constant * square_grad_bias[l] + (1 - adagrad_constant) * grad_biases[l] * grad_biases[l]
+
+                        m_hat = velocity_mats[l] / (1 - momentum_constant**t)
+                        v_hat = square_grad_mats[l] / (1 - adagrad_constant**t)
+                        m_hat_bias = velocity_biases[l] / (1 - momentum_constant**t)
+                        v_hat_bias = square_grad_bias[l] / (1 - adagrad_constant**t)
 
                         # move in direction of momentum
-                        self.weights[l] -= eta * velocity_mats[l]
-                        self.biases[l] -= eta * velocity_biases[l]
+                        eps = 10**(-8)
+                        self.weights[l] -= eta * m_hat/(np.sqrt(v_hat) + eps)
+                        self.biases[l] -= eta * m_hat_bias/(np.sqrt(v_hat_bias) + eps)
                     else:
                         # move in direction of gradient descent
                         self.weights[l] -= eta * grad_mats[l]

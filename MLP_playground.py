@@ -23,13 +23,13 @@ Y_test = np.where(X_test[:, 0]**2 + X_test[:, 1]**2 < 1, 1, 0)
 # batch_size = 32
 # epochs = 200
 # momentum = 0.9
-# Avg Accuracy of ~0.985
+# Avg Accuracy of ~0.989
 
 neurons = [32, 32, 32, 32, 2]
 mlp = MLP(input_size=2, hidden_layer_sizes=neurons)
 
 # Hyperparameters
-eta = 0.001
+eta = 0.0005
 batch_size = 32
 momentum = 0.9
 epochs = 200
@@ -40,7 +40,7 @@ numTrain = 10
 for _ in range(numTrain):
     mlp = MLP(input_size=2, hidden_layer_sizes=neurons)
     
-    loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=batch_size, momentum_constant=momentum)
+    loss_hist = mlp.train(X=X_train, Y=Y_train, epochs=epochs, eta=eta, batch_size=batch_size, adam=True)
 
     avgAcc += mlp.determine_acc(X=X_test, Y=Y_test)
 
