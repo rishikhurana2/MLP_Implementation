@@ -35,7 +35,7 @@ momentum = 0.9
 epochs = 200
 
 avgAcc = 0.0
-numTrain = 1
+numTrain = 10
 
 for _ in range(numTrain):
     mlp = MLP(input_size=2, hidden_layer_sizes=neurons)

@@ -129,9 +129,13 @@ class MLP:
             batches_X = []
             batches_Y = []
             for i in range(num_batches):
+                start = batch_size * i
+                 # either go to the end of the batch of the remainder of the dataset
+                end   = min(batch_size * i + batch_size, N)
+
                 # sample num_batches batches each of size batch_size
-                batches_X.append(X_shuffled[batch_size * i : batch_size * i + batch_size])
-                batches_Y.append(Y_shuffled[batch_size * i : batch_size * i + batch_size])
+                batches_X.append(X_shuffled[start : end])
+                batches_Y.append(Y_shuffled[start : end])
             
             for X_batch, Y_batch in zip(batches_X, batches_Y):
                 # compute the loss and gradient on the current batch
